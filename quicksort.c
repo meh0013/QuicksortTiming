@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#define MAX_POINTS 200
 
 void swap(int arr[], int i, int j){
 	int temp=arr[i];
@@ -35,6 +36,23 @@ int* NumGen(int range, int* retArr){
 	return retArr; 
 }
 
+void moving_average(const double *in, double *out, int n, int window)
+{
+    int half=window/2;
+    for(int i=0;i<n;i++) {
+        double sum=0.0;
+        int count=0;
+
+        for(int j=i-half;j<=i+half;j++) 
+            if(j>=0&&j<n) {
+                sum+=in[j]; 
+                count++;
+            }
+        out[i]=sum/count; 
+    }
+}
+
+
 int main(void){
 	FILE* fptr2;
 	fptr2=fopen("data.txt","w");
@@ -49,14 +67,6 @@ int main(void){
 		int roll[range];
 		NumGen(range, roll);
 		
-		//Writing the Input Array to a file
-		FILE* fptr;
-		fptr=fopen("input.txt","w");
-		for(int i=0;i<range;i++)
-		fprintf(fptr,"%d ",roll[i]);
-		fprintf(fptr,"\n");
-		fclose(fptr);
-		
 		//Executing Quicksort
 		clock_t start,end;
 		start=clock();
@@ -64,13 +74,7 @@ int main(void){
 		quicksort(roll,0,len-1);
 		end=clock();
 		double time_taken = ((double)(end-start))/CLOCKS_PER_SEC; // in seconds 
-		
-		//Appending output to file
-		fptr=fopen("input.txt","a");
-		for(int i=0;i<range;i++)
-		fprintf(fptr,"%d ",roll[i]);
-		fclose(fptr);
-		
+
 		//Logging time
 			FILE* fptr2;
 			fptr2=fopen("data.txt","a");
@@ -78,5 +82,25 @@ int main(void){
 			fclose(fptr2);
 	}
 	
-	system("gnuplot -e \"set terminal png; set output 'plot.png'; plot 'data.txt' with lines\"");
+	FILE *fp = fopen("data.txt", "r");
+	double x[MAX_POINTS];
+	double y[MAX_POINTS];
+	int n = 0;
+	while (n < MAX_POINTS && fscanf(fp, "%lf %lf", &x[n], &y[n]) == 2) {
+		n++;
+	}
+	fclose(fp);
+	
+	
+	double y_smooth[MAX_POINTS];
+	moving_average(y, y_smooth, n, 7);
+	
+	
+	FILE *out = fopen("smoothed.txt", "w");
+	for (int i = 0; i < n; i++) {
+		fprintf(out, "%lf %lf\n", x[i], y_smooth[i]);
+	}
+	fclose(out);
+	
+	system("gnuplot -e \"set terminal png; set output 'plot.png'; set xlabel 'Input Size'; set ylabel 'Time Taken'; plot 'smoothed.txt' with lines\"");
 }
